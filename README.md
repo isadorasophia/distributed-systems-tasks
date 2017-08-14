@@ -1,2 +1,2 @@
-# Distributed Systems
-Tasks related to MC714 course, taken at Unicamp.
+# Distributed Systems :monkey:
+Tasks related to "MC714 - Distributed Systems" course, taken at Unicamp.
