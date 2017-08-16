@@ -3,7 +3,9 @@
 /* multithread libraries */
 #include <omp.h>
 
-#define K 4
+#ifndef K
+    #define K 4
+#endif
 
 int main(int argc, char* argv[]) {
 

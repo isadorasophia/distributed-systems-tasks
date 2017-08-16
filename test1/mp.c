@@ -9,7 +9,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#define K 4
+#ifndef K
+    #define K 4
+#endif
+
 #define ARR_MEM "arr_mem"
 #define ACC_MEM "acc_mem"
 
