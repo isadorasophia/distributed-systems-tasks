@@ -1,7 +1,7 @@
-CC	   = gcc
-CFLAGS =
-K 	   = 4
-N      = 64
+CC	= gcc
+CFLAGS	=
+K	= 4
+N	= 64
 export K
 
 all: seq mt mp
