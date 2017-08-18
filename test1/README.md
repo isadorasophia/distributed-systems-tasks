@@ -1,4 +1,9 @@
 ## Report for test 1
+
+_Student: Isadora Sophia Garcia Rodopoulos_
+
+_RA: 158018_
+
 ### Intro
 The assignment consisted in applying a toy operation, which:
 
