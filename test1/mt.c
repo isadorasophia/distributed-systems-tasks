@@ -15,8 +15,8 @@ int main(int argc, char* argv[]) {
         error("Incorrect arguments!");
     }
 
-    int64_t *arr, elapsed_time,
-            avg = 0;
+    uint64_t *arr, avg = 0;
+	int64_t elapsed_time;
 
     struct timespec start, end;
     clock_gettime(CLOCK_REALTIME, &start);

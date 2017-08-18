@@ -15,5 +15,14 @@ mt: mt.c
 mp: mp.c
 	$(CC) -DK=$(K) $(FLAGS) $< -o $@ -lrt
 
+# run our three applications and report its time (as their output)
+run: clean seq mt mp
+	@echo "\033[1;34mExecuting sequential application for N=$(N):\033[0m"
+	@echo "./seq $(N)" | bash
+	@echo "\033[1;34mExecuting multithread application for N=$(N):\033[0m"
+	@echo "./mt $(N)" | bash
+	@echo "\033[1;34mExecuting multiprocess application for N=$(N):\033[0m"
+	@echo "./mp $(N)" | bash
+
 clean:
 	rm -rf seq mt mp

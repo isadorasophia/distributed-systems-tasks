@@ -8,8 +8,8 @@ int main(int argc, char* argv[]) {
         error("Incorrect arguments!");
     }
 
-    int64_t *arr, elapsed_time,
-            avg = 0;
+    uint64_t *arr, avg = 0;
+	int64_t elapsed_time;
 
     struct timespec start, end;
     clock_gettime(CLOCK_REALTIME, &start);
@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     int32_t N = atoi(argv[1]),
             size = N * (1 << 20);
 
-    arr = malloc(size * sizeof(int64_t));
+    arr = malloc(size * sizeof(uint64_t));
 
     /* allocate random numbers */
     for (int32_t i = 0; i < size; ++i) {

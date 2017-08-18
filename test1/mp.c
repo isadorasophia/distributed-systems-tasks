@@ -18,11 +18,11 @@
 
 void* create_shmem(const char* name, int size, int* fd) {
     *fd = shm_open(name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    if (ftruncate(*fd, size * sizeof(int64_t)) != 0) {
+    if (ftruncate(*fd, size * sizeof(uint64_t)) != 0) {
         error("Unable to allocate memory.");
     }
 
-    return mmap(NULL, size * sizeof(int64_t), 
+    return mmap(NULL, size * sizeof(uint64_t), 
         PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, *fd, 0);
 }
 
@@ -46,8 +46,8 @@ int main(int argc, char* argv[]) {
 
     /* access to shared memory */
     int32_t arr_fd, avg_fd;
-    int64_t* arr = create_shmem(ARR_MEM, size, &arr_fd);
-    int64_t* avg = create_shmem(ACC_MEM, 1, &avg_fd);
+    uint64_t* arr = create_shmem(ARR_MEM, size, &arr_fd);
+    uint64_t* avg = create_shmem(ACC_MEM, 1, &avg_fd);
 
     int32_t chunk = size/K, remaining = size % K;
     pid_t pids[K];
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
                 int32_t mem_start = chunk * k;
                 int32_t mem_end = mem_start+chunk;
 
-                int32_t local_avg = 0;
+                uint64_t local_avg = 0;
 
                 /* if we are the last chunk, get any remaining memory */
                 if (k == K-1) mem_end += size % K;
