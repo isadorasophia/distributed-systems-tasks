@@ -24,7 +24,7 @@ The implementation consisted of three differente approaches:
 For the multithread application, it was used the _OpenMP_ library. As for the multiprocess application, it was used standard Linux methods.
 
 ### Results
-The results collected were estimated from executions with ```N = 64``` and ```k = 4```. The graph bellow speaks for itself.
+The results collected were estimated from executions with ```N = 64```. The graph bellow speaks for itself.
 
 ![Graph](results/graph.png)
 
