@@ -21,6 +21,8 @@ For the multithread application, it was used the _OpenMP_ library. As for the mu
 ### Results
 The results collected were estimated from executions with ```N = 64``` and ```k = 4```. The graph bellow speaks for itself.
 
-![Graph](/results/graph.png)
+![Graph](results/graph.png)
 
-Clearly, the multithreaded operation achieved the best speedup - this is mainly due to the overhead in the multiprocess operation being too high compared to the workload. In general, Linux handles threads with less overhead than process - the inter-thread communication for sharing data is much simpler and there is no need for context switches. As in this case we don't have any restrictions in which to use, multithreads would be a better choice for speeding up our calculations.
+Clearly, the multithread operation achieved the best speedup - this is mainly due to the overhead involved in the multiprocess operation. In general, Linux handles threads with less overhead than processes - the inter-thread communication for sharing data is much simpler and there is no need for context switches. As in this case we don't have any restrictions in which of them to use, a multithreading would be the best solution for speeding up our current application.
+
+Another interesting note is that we actually achieve a speed down after 8 threads, which is reasonable considering the execution took place in a Quad-Core CPU.
