@@ -1,4 +1,4 @@
-import argparse, pickle, random
+import argparse, pickle, random, time
 import threading, Queue
 import zmq
 
@@ -57,7 +57,7 @@ class SenderProcess(threading.Thread):
         try:
             sender_socket = self.p.context.socket(zmq.PUSH)
         except:
-            print('[@] EXCEPTION AT: ' + str(self.p.port))
+            print '[@] EXCEPTION AT: ' + str(self.p.port)
             return
 
         payload = Payload(self.p.host, self.p.port)
@@ -70,7 +70,7 @@ class SenderProcess(threading.Thread):
             random_ip, (min_port, max_port) = self.random.choice(processes)
             random_port = self.random.randint(min_port, max_port)
 
-            print 'CHOOSE ' + str(random_port)
+            print '[/] MSG TO: ' + str(random_port) + ', FROM: ' + str(self.p.port)
 
             send(sender_socket, random_ip, random_port, payload)
 
@@ -105,33 +105,25 @@ class ListenerProcess(threading.Thread):
 
     def run(self):
         try:
-            recv_socket = self.context.socket(zmq.PULL)
-            recv_socket.setsockopt(zmq.LINGER, 0)
-            recv_socket.set_hwm(100000)
-            recv_socket.bind(self.endpoint)
+            recv_socket = self.context.socket(zmq.PULL)     # PULL SOCKET
+            recv_socket.setsockopt(zmq.LINGER, 0)           # just in case: do not linger
+            recv_socket.set_hwm(100000)                     # buffer for stack size
+            recv_socket.bind(self.endpoint)                 # CONNECT
 
-            sender_socket = self.context.socket(zmq.PUSH)
+            sender_socket = self.context.socket(zmq.PUSH)   # PUSH SOCKET
         except:
             # just go away, process FAILED
             self.q.task_done()
 
-            print('[@] PROCESS TERMINATED: \t' + self.endpoint)
             return
 
         # keeps listening to any messages
         while self.terminate is False:
-            print str(self.p.port) + ' AND QUEUE L: ' + str(self.q.unfinished_tasks)
+            print '[\] PORT: ' + str(self.p.port) + ', QUEUE L: ' + str(self.q.unfinished_tasks)
             try:
-                if self.q.unfinished_tasks < 1:
-                    msg = pickle.loads(recv_socket.recv(flags=zmq.NOBLOCK))
-                else:
-                    msg = pickle.loads(recv_socket.recv())
+                msg = pickle.loads(recv_socket.recv())
             except zmq.ContextTerminated:
-                print('[@] PROCESS TERMINATED: \t' + self.endpoint)
                 return
-            except zmq.Again:
-                print('port: ' + str(self.p.port))
-                continue
 
             ## REQUEST
             if msg.req:
@@ -146,7 +138,7 @@ class ListenerProcess(threading.Thread):
                     send(sender_socket, msg.host, msg.port, rep)
 
                 else:
-                    print('[$] MESSAGE RECEIVED: \t' + str(self.p.port))
+                    print '[*] MESSAGE RECEIVED: \t' + str(self.p.port)
 
                     # get this message done, start dispatcher
                     self.all_msg.add(msg.content)
@@ -167,17 +159,19 @@ class ListenerProcess(threading.Thread):
                         if self.sender.terminate is False:
                             self.sender.terminate = True
 
-                            print('[$] SHUT DOWN: \t' + str(self.p.port))
+                            print '[$] SHUT DOWN: \t' + str(self.p.port)
                         
                             self.q.task_done()
-                            sender_socket.close(linger=0)
-                            recv_socket.close(linger=0)
-                            return
+                            # sender_socket.close(linger=0)
+                            # recv_socket.close(linger=0)
+                            # return
 
                     ## else just ignores: can't stop, won't stop
 
                 ## else just ignores: it's a happy reply
 
+        sender_socket.close(linger=0)
+        recv_socket.close(linger=0)
         return
 
     def stop(self):
@@ -216,9 +210,10 @@ def send(socket, ip, port, payload):
         socket.send(pickle.dumps(payload), flags=zmq.NOBLOCK)
 
         socket.disconnect(endpoint)
+        time.sleep(.5)
 
     except:
-        print('# Send process was interrupted')
+        print '# Send process was interrupted!'
         return
 
 def main(N, K):
@@ -252,7 +247,7 @@ def main(N, K):
     ## begin to spread rumor!
     if current_ip == host_list.keys()[0]:
 
-        print('[!] Sending first message: ' + msg)
+        print '[!] Sending first message: ' + msg
 
         sender_socket = context.socket(zmq.PUSH)
         payload = Payload(current_ip, min_port)
