@@ -107,6 +107,7 @@ class ListenerProcess(threading.Thread):
         try:
             recv_socket = self.context.socket(zmq.PULL)
             recv_socket.setsockopt(zmq.LINGER, 0)
+            recv_socket.set_hwm(100000)
             recv_socket.bind(self.endpoint)
 
             sender_socket = self.context.socket(zmq.PUSH)
@@ -114,17 +115,23 @@ class ListenerProcess(threading.Thread):
             # just go away, process FAILED
             self.q.task_done()
 
-            print('[@] Terminated process: \t\t' + self.endpoint)
+            print('[@] PROCESS TERMINATED: \t' + self.endpoint)
             return
 
         # keeps listening to any messages
         while self.terminate is False:
             print str(self.p.port) + ' AND QUEUE L: ' + str(self.q.unfinished_tasks)
             try:
-                msg = pickle.loads(recv_socket.recv())
+                if self.q.unfinished_tasks < 1:
+                    msg = pickle.loads(recv_socket.recv(flags=zmq.NOBLOCK))
+                else:
+                    msg = pickle.loads(recv_socket.recv())
             except zmq.ContextTerminated:
-                # print('> Terminated process: \t\t' + self.endpoint)
+                print('[@] PROCESS TERMINATED: \t' + self.endpoint)
                 return
+            except zmq.Again:
+                print('port: ' + str(self.p.port))
+                continue
 
             ## REQUEST
             if msg.req:
@@ -163,6 +170,8 @@ class ListenerProcess(threading.Thread):
                             print('[$] SHUT DOWN: \t' + str(self.p.port))
                         
                             self.q.task_done()
+                            sender_socket.close(linger=0)
+                            recv_socket.close(linger=0)
                             return
 
                     ## else just ignores: can't stop, won't stop
