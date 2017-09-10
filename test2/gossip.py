@@ -21,86 +21,110 @@ class Payload:
     def set_stop(self):
         self.stop = True
 
-def tcp_endpoint(ip, port):
-    return "tcp://" + ip + ":" + str(port)
+class Process:
+    """
+        Basic info. regarding a process 
+          context:      ZMQ context
+          ip&port:      communication info
+          host_list:    all hosts available and its respective ports
+    """
+    def __init__(self, context, host, port, host_list):
+        self.context = context
+        self.host_list = host_list
+
+        self.host = host 
+        self.port = port
 
 class SenderProcess(threading.Thread):
     """
         Emulate a process, which is responsible for gossiping.
         > SEND STUFF!
-            q:          shared queue
-            context:    zmq context
-            host&port:  communication info
-            n:          total of processes
-            min_port:   minimum port available
+            process:    information of current process
+            msg:        msg to be sent
     """
-    def __init__(self, context, host, port, msg,
-                    n, min_port=5000):
-        self.context = context
-        self.n = n
-        self.min_port = min_port
-
-        self.host = host
-        self.port = port
+    def __init__(self, process, msg):
+        self.p = process
         self.msg = msg
 
         self.random = random.Random()
-        random.seed(port)
+        random.seed(self.p.port)
 
-        self.stop = False
+        self.terminate = False
         threading.Thread.__init__(self)
 
     def run(self):
-        payload = Payload(self.host, self.port)
+        # prepare our socket and payload to begin send process!
+        try:
+            sender_socket = self.p.context.socket(zmq.PUSH)
+        except:
+            print('[@] EXCEPTION AT: ' + str(self.p.port))
+            return
+
+        payload = Payload(self.p.host, self.p.port)
         payload.set_msg(self.msg)
 
-        # keep sending to anyone who listens
-        while not self.stop:
-            random_ip = "localhost"
-            random_port = self.random.randint(min_port, n)
+        processes = list(self.p.host_list.items())
 
-            send(random_ip, random_port, payload)
+        # keep sending to anyone who listens
+        while not self.terminate:
+            random_ip, (min_port, max_port) = self.random.choice(processes)
+            random_port = self.random.randint(min_port, max_port)
+
+            print 'CHOOSE ' + str(random_port)
+
+            send(sender_socket, random_ip, random_port, payload)
+
+        sender_socket.close(linger=0)
+        return
 
 class ListenerProcess(threading.Thread):
     """
         Emulate a process, which is responsible for gossiping.
         > LISTEN STUFF!
-            q:          shared queue
-            context:    zmq context
-            ip&port:    communication info
-            n:          total of processes
+            q:          shared queue with process information
             k:          chance of a process to stop
-            min_port:   minimum port available
     """
-    def __init__(self, q, context, host, port,
-                    n, k, min_port=5000):
-        # shared variables
+    def __init__(self, q, k):
+        # get current PROCESS information
         self.q = q
-        self.q.get()
+        self.p = self.q.get()
+        self.endpoint = tcp_endpoint(self.p.host, self.p.port)
 
-        self.context = context
-        self.host = host
-        self.port = port
-
-        self.n = n
+        self.context = self.p.context
         self.k = k * 1.
 
-        self.random = random.Random()
-        random.seed(port)
         self.all_msg = set()
-
         self.sender = None
 
+        self.random = random.Random()
+        random.seed(self.p.port)
+
         threading.Thread.__init__(self)
-        self.daemon = True
+        self.terminate = False
+        #self.daemon = True
 
     def run(self):
-        recv_socket = self.context.socket(zmq.PULL)
-        recv_socket.bind(tcp_endpoint(self.host, self.port))
+        try:
+            recv_socket = self.context.socket(zmq.PULL)
+            recv_socket.setsockopt(zmq.LINGER, 0)
+            recv_socket.bind(self.endpoint)
+
+            sender_socket = self.context.socket(zmq.PUSH)
+        except:
+            # just go away, process FAILED
+            self.q.task_done()
+
+            print('[@] Terminated process: \t\t' + self.endpoint)
+            return
 
         # keeps listening to any messages
-        while True:
-            msg = pickle.loads(recv_socket.recv())
+        while self.terminate is False:
+            print str(self.p.port) + ' AND QUEUE L: ' + str(self.q.unfinished_tasks)
+            try:
+                msg = pickle.loads(recv_socket.recv())
+            except zmq.ContextTerminated:
+                # print('> Terminated process: \t\t' + self.endpoint)
+                return
 
             ## REQUEST
             if msg.req:
@@ -108,22 +132,22 @@ class ListenerProcess(threading.Thread):
                 if msg.content in self.all_msg:
 
                     # create a reply telling this sender to stop
-                    rep = Payload(ip, port)
+                    rep = Payload(self.p.host, self.p.port)
                     rep.set_stop()
 
                     # connect to whoever sent me
-                    self.send(msg[ip], msg[port], rep)
+                    send(sender_socket, msg.host, msg.port, rep)
 
                 else:
+                    print('[$] MESSAGE RECEIVED: \t' + str(self.p.port))
+
                     # get this message done, start dispatcher
                     self.all_msg.add(msg.content)
 
                     # we can only handle one message, by now
                     assert(self.sender is None)
 
-                    self.sender = SenderProcess(self.context, self.host, self.port, \
-                        msg.content, self.n, self.min_port)
-
+                    self.sender = SenderProcess(process=self.p, msg=msg.content)
                     self.sender.start()
 
             ## REPLY
@@ -133,12 +157,19 @@ class ListenerProcess(threading.Thread):
                         # if we don't have a sender, it doesn't make sense
                         assert(self.sender is not None)
 
-                        self.sender.stop = True
-                        self.q.task_done()
+                        if self.sender.terminate is False:
+                            self.sender.terminate = True
+
+                            print('[$] SHUT DOWN: \t' + str(self.p.port))
+                        
+                            self.q.task_done()
+                            return
 
                     ## else just ignores: can't stop, won't stop
 
                 ## else just ignores: it's a happy reply
+
+        return
 
     def stop(self):
         """
@@ -146,14 +177,7 @@ class ListenerProcess(threading.Thread):
         """
         return self.random.uniform(0, 1) < 1/self.k
 
-    def send(self, ip, port, payload):
-        """
-            Send a payload to an ip and port through TCP
-        """
-        s = self.context.socket(zmq.PUSH)
-        s.connect(tcp_endpoint(ip, port))
-
-        s.send(picke.dumps(payload))
+################### Helper functions! ###################
 
 def cook_parser():
     """
@@ -166,28 +190,76 @@ def cook_parser():
 
     return parser
 
-def main(N, K):
-    min_port = 5000
-    max_port = 50000
+def tcp_endpoint(ip, port):
+    """
+        Bake a TCP endpoint string
+    """
+    return "tcp://" + ip + ":" + str(port)
 
-    ip = "127.0.0.1"
+def send(socket, ip, port, payload):
+    """
+        Send a payload to an ip and port through TCP, using ZMQ sockets
+    """
+    endpoint = tcp_endpoint(ip, port)
+
+    try:
+        socket.connect(endpoint)
+        socket.send(pickle.dumps(payload), flags=zmq.NOBLOCK)
+
+        socket.disconnect(endpoint)
+
+    except:
+        print('# Send process was interrupted')
+        return
+
+def main(N, K):
+    """
+        Main function!
+    """
+    current_ip = "127.0.0.1"
+    msg = "Very important and high priority message."
+
+    min_port = 15000
+    max_port = 50000
 
     # we can't surpass our limit
     assert(min_port + N < max_port)
 
+    host_list = {"127.0.0.1": (min_port, min_port+N-1)}
+
     # context variables
     context = zmq.Context()
-    context.set(zmq.MAX_SOCKETS, N)
+    context.set(zmq.MAX_SOCKETS, N*3+1)
+    context.setsockopt(zmq.LINGER, 1)
+
     q = Queue.Queue()
+    listeners = []
 
     for i in xrange(N):
-        q.put(i)
-        process = ListenerProcess(q, context, ip, min_port+i,
-                    N, K, min_port)
-        process.start()
+        q.put(Process(context, current_ip, min_port+i, host_list))
+        listeners.append(ListenerProcess(q, K))
+        listeners[i].start()
+
+    ## begin to spread rumor!
+    if current_ip == host_list.keys()[0]:
+
+        print('[!] Sending first message: ' + msg)
+
+        sender_socket = context.socket(zmq.PUSH)
+        payload = Payload(current_ip, min_port)
+        payload.set_msg(msg)
+
+        send(sender_socket, current_ip, min_port, payload)
+        sender_socket.close()
 
     # wait for all process to be done
     q.join()
+
+    for i in xrange(N):
+        listeners[i].terminate = True
+
+    context.term()
+    return
 
 if __name__ == "__main__":
     parser = cook_parser()
