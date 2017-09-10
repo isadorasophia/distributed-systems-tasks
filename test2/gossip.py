@@ -68,7 +68,9 @@ class SenderProcess(threading.Thread):
             # set our socket to begin our send process!
             sender_socket = self.p.context.socket(zmq.PUSH)
         except:
-            print '[@] EXCEPTION AT SENDER: ' + str(self.p.port)
+            if __debug__:
+                print '[@] EXCEPTION AT SENDER: ' + str(self.p.port)
+
             return
 
         # prepare our payload as well
@@ -84,8 +86,9 @@ class SenderProcess(threading.Thread):
 
             send(sender_socket, random_ip, random_port, payload)
 
-            print '[/] MSG TO: ' + str(random_port) + ', FROM: ' + str(self.p.port)
             self.total_sent += 1
+            if __debug__:
+                print '[/] MSG TO: ' + str(random_port) + ', FROM: ' + str(self.p.port)
 
         # clean up!
         sender_socket.close(linger=0)
@@ -134,13 +137,14 @@ class ListenerProcess(threading.Thread):
             # just go away, process FAILED
             self.q.task_done()
 
-            print '[@] EXCEPTION AT LISTENER: ' + str(self.p.port)
+            if __debug__:
+                print '[@] EXCEPTION AT LISTENER: ' + str(self.p.port)
             return
 
         # keeps listening to any messages
         while self.terminate is False:
-            # display current status
-            print '[\] PORT: ' + str(self.p.port) + ', QUEUE L: ' + str(self.q.unfinished_tasks)
+            if __debug__:
+                print '[\] PORT: ' + str(self.p.port) + ', QUEUE L: ' + str(self.q.unfinished_tasks)
 
             try:
                 msg = recv_socket.recv_pyobj()
@@ -160,7 +164,8 @@ class ListenerProcess(threading.Thread):
                     send(sender_socket, msg.host, msg.port, rep)
 
                 else:
-                    print '[*] MESSAGE RECEIVED: \t' + str(self.p.port)
+                    if __debug__:
+                        print '[*] MESSAGE RECEIVED: \t' + str(self.p.port)
 
                     # get this message done, start dispatcher
                     self.all_msg.add(msg.content)
@@ -187,7 +192,8 @@ class ListenerProcess(threading.Thread):
 
                             self.rumor_attempts += self.sender.total_sent
 
-                            print '[$] SHUT DOWN: \t' + str(self.p.port)
+                            if __debug__:
+                                print '[$] SHUT DOWN: \t' + str(self.p.port)
 
             # if we are ALREADY done 
             #    -> give priority to process that aren't done yet
@@ -242,6 +248,9 @@ def send(socket, ip, port, payload):
         print '# Send process was interrupted!'
         return
 
+def miliseconds():
+    return int(round(time.time() * 1000))
+
 def main(N, K):
     """
         Main function!
@@ -267,6 +276,8 @@ def main(N, K):
     q = Queue.Queue()
     listeners = []
 
+    start = miliseconds()
+
     for i in xrange(N):
         # create a new process as a LISTENER
         q.put(Process(context, current_ip, min_port+i, host_list))
@@ -287,6 +298,8 @@ def main(N, K):
 
     # wait for all process to be done
     q.join()
+
+    end = miliseconds()
 
     min_sent = sys.maxint
     max_sent = 0
@@ -314,6 +327,7 @@ def main(N, K):
     print max_sent
     print total_sent
     print total_failed
+    print end-start
 
     return
 

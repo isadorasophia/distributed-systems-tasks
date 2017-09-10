@@ -5,7 +5,13 @@ _Student: Isadora Sophia Garcia Rodopoulos_
 _RA: 158018_
 
 ### Intro
-The assignment proposed the simulation of the gossip protocol, by relying on TCP/IP sockets. In summary, the algorithm consisted in:
+The assignment proposed the simulation of the gossip protocol, by relying on TCP/IP sockets. 
+
+```
+python [-O] gossip.py N K
+```
+
+In summary, the algorithm consisted in:
 
 * ```N``` and ```k``` were received as arguments;
 * dispatch a total of ```N``` processes, each with its own port;
