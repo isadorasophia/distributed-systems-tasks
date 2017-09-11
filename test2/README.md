@@ -13,22 +13,24 @@ python [-O] gossip.py N K
 
 In summary, the algorithm consisted in:
 
-* ```N``` and ```k``` were received as arguments;
+* ```N``` and ```k``` are received as arguments;
 * dispatch a total of ```N``` processes, each with its own port;
 * send a single message as a *rumor* for the first process;
 * for each process:
      + a _listener_ is created and awaits for a rumor
-     + when a rumor is received for the first time, starts a _sender_: which spreads the rumor randomly accross all processes available
-     + if _listener_ received another rumor, it sends a *STOP* message back.
+     + when a rumor is received for the first time, start a _sender_: which spread the rumor randomly accross all processes available
+     + if _listener_ receives another rumor, it sends a *STOP* message back.
      + otherwise, if it received a *STOP* message, stops sending new messages with a probability of ```1/k```
-        + if ```p < 1/k```, interrupts _sender_, sends a signal and continues to listen for new messages
+        + if ```p < 1/k```, interrupt _sender_, send a signal and continue to listen for new messages
 * when all processes have received the rumor, stop the application and gather data 
-* otherwise, force quit the application
+* otherwise, force quit the application (or apply a timeout)
 
 ### Implementation
 The implementation relied on the _ZeroMQ_ library in _Python_ - mainly due to the complexity of the packets and to allow shorter feedbacks, even though it was initially implemented in _C_.
 
 Each process is dispatched as a thread, using ```threading``` library from _Python_ - i.e. a _listener_ and a _sender_ are two different threads, related to a same abstract process, bound to a certain port.
+
+Also, note that some ```sleep()``` functions were applied in order to ensure priority to some processes that have not received any message yet.
 
 ### Results
 The results turned out to be highly experimental. For instance, in order to allow its execution on my OS (Ubuntu 16.04), some flags configuration were necessary, such as:
@@ -41,6 +43,8 @@ sysctl -n fs.nr_open
 ```
 
 These commands allowed to increase the limit of total of sockets supported by the OS and the stack size per application, which were necessary specially when N > 1000.
+
+When application took longer than one minute to execute, it was simply assumed that the simulation was finished - with some of the processors never receiving any message. For that matter, _time_ was not taken into account when comparing results, but rather how many messages received the rumor.
 
 #### How many times did each process tried to gossip?
     ![Graph]()

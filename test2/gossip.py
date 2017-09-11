@@ -49,10 +49,13 @@ class SenderProcess(threading.Thread):
         > SEND STUFF!
             process:    information of current process
             msg:        msg to be sent
+            q:          queue to sync data
     """
-    def __init__(self, process, msg):
+    def __init__(self, process, msg, queue):
         self.p = process
         self.msg = msg
+
+        self.q = queue
 
         # total of messages sent
         self.total_sent = 0
@@ -90,6 +93,9 @@ class SenderProcess(threading.Thread):
             if __debug__:
                 print '[/] MSG TO: ' + str(random_port) + ', FROM: ' + str(self.p.port)
 
+        # apply result        
+        self.q.put(self.total_sent)
+
         # clean up!
         sender_socket.close(linger=0)
 
@@ -102,10 +108,11 @@ class ListenerProcess(threading.Thread):
             q:          shared queue with process information
             k:          chance of a process to stop
     """
-    def __init__(self, q, k):
+    def __init__(self, q, k, res):
         # get current PROCESS information
         self.q = q
         self.p = self.q.get()
+        self.res = res
 
         # STATISTICS:
         self.rumor_attempts = 0
@@ -129,6 +136,7 @@ class ListenerProcess(threading.Thread):
         try:
             recv_socket = self.context.socket(zmq.PULL)     # PULL SOCKET
             recv_socket.setsockopt(zmq.LINGER, 0)           # just in case: do not linger
+            recv_socket.setsockopt(zmq.RCVTIMEO, 8000)
             recv_socket.set_hwm(100000)                     # buffer for stack size
             recv_socket.bind(self.endpoint)                 # CONNECT
 
@@ -146,10 +154,24 @@ class ListenerProcess(threading.Thread):
             if __debug__:
                 print '[\] PORT: ' + str(self.p.port) + ', QUEUE L: ' + str(self.q.unfinished_tasks)
 
+            # if we are ALREADY done 
+            #    -> give priority to process that aren't done yet
+            if self.sender is not None and self.sender.terminate:
+                time.sleep(.5)
+
             try:
                 msg = recv_socket.recv_pyobj()
             except zmq.ContextTerminated:
                 # it means that things are done, just go away
+                break
+            except:
+                #   - if expired timeout and we have never received any message, just assume that
+                #   the thread will never receive any message
+                #   - otherwise, it's just messing with our priority system and go away
+                if self.sender is None:
+                    self.res.put((-1, -1))
+                    self.q.task_done()
+
                 return
 
             ## REQUEST
@@ -169,11 +191,12 @@ class ListenerProcess(threading.Thread):
 
                     # get this message done, start dispatcher
                     self.all_msg.add(msg.content)
+                    self.sender_q = Queue.Queue()
 
                     # by now: we can only handle one message (a.k.a. do NOT dispatch another sender)
                     assert(self.sender is None)
 
-                    self.sender = SenderProcess(process=self.p, msg=msg.content)
+                    self.sender = SenderProcess(process=self.p, msg=msg.content, queue=self.sender_q)
                     self.sender.start()
 
                 self.total_rumors_recv += 1
@@ -190,19 +213,19 @@ class ListenerProcess(threading.Thread):
                             self.sender.terminate = True
                             self.q.task_done()
 
-                            self.rumor_attempts += self.sender.total_sent
-
                             if __debug__:
                                 print '[$] SHUT DOWN: \t' + str(self.p.port)
 
-            # if we are ALREADY done 
-            #    -> give priority to process that aren't done yet
-            if self.sender is not None and self.sender.terminate:
-                time.sleep(1)
-
         # clean up!
-        sender_socket.close(linger=0)
-        recv_socket.close(linger=0)
+        self.sender.terminate = True
+        self.res.put((self.sender_q.get(), self.total_rumors_recv))
+
+        try:
+            sender_socket.close(linger=0)
+            recv_socket.close(linger=0)
+        except:
+            if __debug__:
+                print '[X] CLOSED: \t' + str(self.p.port)
 
         return
 
@@ -242,11 +265,20 @@ def send(socket, ip, port, payload):
         socket.send_pyobj(payload, flags=zmq.NOBLOCK)
 
         socket.disconnect(endpoint)
-        time.sleep(.05)
+        time.sleep(.5)
 
     except:
         print '# Send process was interrupted!'
         return
+
+def range_n(n, start, end, exclude=False):
+    """
+        Produces a range from start to end, without n
+    """
+    if exclude:
+        return range(start, n) + range(n+1, end)
+    else:
+        return range(start, end)
 
 def miliseconds():
     return int(round(time.time() * 1000))
@@ -274,14 +306,18 @@ def main(N, K):
     context.setsockopt(zmq.LINGER, 1)
 
     q = Queue.Queue()
+
     listeners = []
+    res = []
 
     start = miliseconds()
 
     for i in xrange(N):
         # create a new process as a LISTENER
         q.put(Process(context, current_ip, min_port+i, host_list))
-        listeners.append(ListenerProcess(q, K))
+
+        res.append(Queue.Queue())
+        listeners.append(ListenerProcess(q, K, res[i]))
 
         listeners[i].start()
 
@@ -301,18 +337,32 @@ def main(N, K):
 
     end = miliseconds()
 
+    # end all processes
+    for i in xrange(N):
+        listeners[i].terminate = True
+
+    context.term()
+
     min_sent = sys.maxint
     max_sent = 0
     total_sent = 0
     total_failed = 0
 
+    received = 0.
+
     total_sent_i = [0] * N
 
+    # gather data
     for i in xrange(N):
-        listeners[i].terminate = True
+        total_sent_i[i], failed = res[i].get()
 
-        total_sent_i[i] = listeners[i].rumor_attempts
-        total_failed += listeners[i].total_rumors_recv-1
+        # skip failed tests
+        if failed == -1:
+            continue
+        else:
+            received += 1
+
+        total_failed += failed-1
 
         total_sent += total_sent_i[i]
         if total_sent_i[i] < min_sent:
@@ -321,13 +371,22 @@ def main(N, K):
         if total_sent_i[i] > max_sent:
             max_sent = total_sent_i[i]
 
-    context.term()
+    print total_sent_i
 
-    print min_sent
-    print max_sent
-    print total_sent
-    print total_failed
-    print end-start
+    print '############# Results report:'
+    print 'min: \t\t' + str(min_sent)
+    print 'max: \t\t' + str(max_sent)
+    print 'total sent: \t' + str(total_sent)
+    print 'average: \t' + str(total_sent/received)
+    print 'total failed: \t' + str(total_failed)
+    print 'received: \t' + str(received) + '/' + str(N)
+
+    try:
+        print 'parcel f/s: \t' + str(total_failed/(total_sent*1.))
+    except ZeroDivisionError:
+        print 'parcel f/s: #'
+
+    print 'time: \t\t' + str(end-start)
 
     return
 
