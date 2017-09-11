@@ -138,7 +138,7 @@ class ListenerProcess(threading.Thread):
         try:
             recv_socket = self.context.socket(zmq.PULL)     # PULL SOCKET
             recv_socket.setsockopt(zmq.LINGER, 0)           # just in case: do not linger
-            recv_socket.setsockopt(zmq.RCVTIMEO, 240000)
+            recv_socket.setsockopt(zmq.RCVTIMEO, 5000)
             recv_socket.set_hwm(100000)                     # buffer for stack size
             recv_socket.bind(self.endpoint)                 # CONNECT
 
@@ -267,8 +267,7 @@ def send(socket, ip, port, payload):
         socket.send_pyobj(payload, flags=zmq.NOBLOCK)
 
         socket.disconnect(endpoint)
-        time.sleep(.5)
-
+        time.sleep(.05)
         return 1
 
     except:
@@ -307,7 +306,6 @@ def main(N, K):
     # context variables
     context = zmq.Context()
     context.set(zmq.MAX_SOCKETS, N*3+1)
-    context.setsockopt(zmq.LINGER, 1)
 
     q = Queue.Queue()
 
@@ -344,8 +342,6 @@ def main(N, K):
     # end all processes
     for i in xrange(N):
         listeners[i].terminate = True
-
-    context.term()
 
     min_sent = sys.maxint
     max_sent = 0
@@ -391,6 +387,7 @@ def main(N, K):
         print 'parcel f/s: #'
 
     print 'time: \t\t' + str(end-start)
+    context.term()
 
     return
 
