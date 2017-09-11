@@ -92,8 +92,8 @@ class SenderProcess(threading.Thread):
                 break
 
             self.total_sent += 1
-            # if __debug__:
-            #     print '[/] MSG TO: ' + str(random_port) + ', FROM: ' + str(self.p.port)
+            if __debug__:
+                print '[/] MSG TO: ' + tcp_endpoint(random_ip, random_port) + ', FROM: ' + str(self.p.port)
 
         # apply result        
         self.q.put(self.total_sent)
@@ -138,7 +138,7 @@ class ListenerProcess(threading.Thread):
         try:
             recv_socket = self.context.socket(zmq.PULL)     # PULL SOCKET
             recv_socket.setsockopt(zmq.LINGER, 0)           # just in case: do not linger
-            recv_socket.setsockopt(zmq.RCVTIMEO, 5000)
+            recv_socket.setsockopt(zmq.RCVTIMEO, 240000)
             recv_socket.set_hwm(100000)                     # buffer for stack size
             recv_socket.bind(self.endpoint)                 # CONNECT
 
@@ -296,8 +296,8 @@ def main(N, K):
     min_port = 15000
     max_port = 50000
 
-    host_list = {"127.0.0.1": (min_port, min_port+N-1)}
-    current_ip = "127.0.0.1"
+    host_list = {"159.203.143.31": (min_port, min_port+N-1), "165.227.178.233": (min_port, min_port+N-1)}
+    current_ip = "165.227.178.233"
 
     msg = "Very important and high priority message."
 
