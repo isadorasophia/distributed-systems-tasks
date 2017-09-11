@@ -87,11 +87,13 @@ class SenderProcess(threading.Thread):
             random_ip, (min_port, max_port) = self.random.choice(processes)
             random_port = self.random.randint(min_port, max_port)
 
-            send(sender_socket, random_ip, random_port, payload)
+            # if something went wrong
+            if send(sender_socket, random_ip, random_port, payload) == -1:
+                break
 
             self.total_sent += 1
-            if __debug__:
-                print '[/] MSG TO: ' + str(random_port) + ', FROM: ' + str(self.p.port)
+            # if __debug__:
+            #     print '[/] MSG TO: ' + str(random_port) + ', FROM: ' + str(self.p.port)
 
         # apply result        
         self.q.put(self.total_sent)
@@ -136,7 +138,7 @@ class ListenerProcess(threading.Thread):
         try:
             recv_socket = self.context.socket(zmq.PULL)     # PULL SOCKET
             recv_socket.setsockopt(zmq.LINGER, 0)           # just in case: do not linger
-            recv_socket.setsockopt(zmq.RCVTIMEO, 8000)
+            recv_socket.setsockopt(zmq.RCVTIMEO, 5000)
             recv_socket.set_hwm(100000)                     # buffer for stack size
             recv_socket.bind(self.endpoint)                 # CONNECT
 
@@ -157,22 +159,22 @@ class ListenerProcess(threading.Thread):
             # if we are ALREADY done 
             #    -> give priority to process that aren't done yet
             if self.sender is not None and self.sender.terminate:
-                time.sleep(.5)
+                time.sleep(1)
 
             try:
                 msg = recv_socket.recv_pyobj()
-            except zmq.ContextTerminated:
-                # it means that things are done, just go away
-                break
             except:
+                # if context was terminated OR:
                 #   - if expired timeout and we have never received any message, just assume that
                 #   the thread will never receive any message
                 #   - otherwise, it's just messing with our priority system and go away
-                if self.sender is None:
+                if self.sender is None or self.sender.terminate == False:
                     self.res.put((-1, -1))
                     self.q.task_done()
 
-                return
+                    return
+
+                break
 
             ## REQUEST
             if msg.req:
@@ -267,9 +269,11 @@ def send(socket, ip, port, payload):
         socket.disconnect(endpoint)
         time.sleep(.5)
 
+        return 1
+
     except:
         print '# Send process was interrupted!'
-        return
+        return -1
 
 def range_n(n, start, end, exclude=False):
     """
