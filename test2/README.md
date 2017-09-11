@@ -35,11 +35,11 @@ Also, note that some ```sleep()``` functions were applied in order to ensure pri
 ### Results
 The results turned out to be highly experimental. For instance, in order to allow its execution on my OS (Ubuntu 16.04), some flags configuration were necessary, such as:
 
-```
-ulimit -n
-ulimit -s
-cat /etc/security/limits.conf
-sysctl -n fs.nr_open
+```bash
+$ ulimit -n
+$ ulimit -s
+$ cat /etc/security/limits.conf
+$ sysctl -n fs.nr_open
 ```
 
 These commands allowed to increase the limit of total of sockets supported by the OS and the stack size per application, which were necessary specially when N > 1000.
