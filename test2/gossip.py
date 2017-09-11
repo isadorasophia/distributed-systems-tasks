@@ -138,7 +138,7 @@ class ListenerProcess(threading.Thread):
         try:
             recv_socket = self.context.socket(zmq.PULL)     # PULL SOCKET
             recv_socket.setsockopt(zmq.LINGER, 0)           # just in case: do not linger
-            recv_socket.setsockopt(zmq.RCVTIMEO, 5000)
+            recv_socket.setsockopt(zmq.RCVTIMEO, 90000)
             recv_socket.set_hwm(100000)                     # buffer for stack size
             recv_socket.bind(self.endpoint)                 # CONNECT
 

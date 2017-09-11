@@ -56,4 +56,29 @@ When application took longer than one minute to execute, it was simply assumed t
 #### How long did it take betwewen the start and the end of the dissemination?
 
 ### Extra
-Through _Azure_ virtual machines, it was executed a test of the application between more than two hosts.
+Through _Azure_ virtual machines, it was executed a test of the application between two hosts.
+
+ | Total sent | Average gossips | Processes w/ a rumor | Failure rate |  Time  |
+ | --- | --- | --- | --- | --- |
+|**A**| 1024 | 10.24 | 100% | 37% | 3.9s |
+|**B**| 727 | 7.27 | 100% | 53% | 2.47s |
+
+A
+min:            1
+max:            41
+total sent:     1024
+average:        10.24
+total failed:   482
+received:       100.0/100
+parcel f/s:     0.470703125
+time:           3963
+
+B
+min:            1
+max:            39
+total sent:     727
+average:        7.27
+total failed:   387
+received:       100.0/100
+parcel f/s:     0.532324621733
+time:           2472
