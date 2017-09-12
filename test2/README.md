@@ -45,13 +45,13 @@ $ sysctl -n fs.nr_open
 These commands allowed to increase the limit of total of sockets supported by the OS and the stack size per application, which were necessary specially when N > 1000.
 
 #### How many times did each process tried to gossip?
-    ![Graph](results/avg.png)
+![Graph](results/avg.png)
 
 #### What was the rate of successfull gossip attempts?
-     ![Graph](results/failure.png)
+![Graph](results/failure.png)
      
 #### In the end of the dissemination, how many process have the rumor?
-     ![Graph](results/received.png)
+![Graph](results/received.png)
     
 #### How long did it take betwewen the start and the end of the dissemination?
 
