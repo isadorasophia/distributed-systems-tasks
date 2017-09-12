@@ -28,9 +28,9 @@ In summary, the algorithm consisted in:
 ### Implementation
 The implementation relied on the _ZeroMQ_ library in _Python_ - mainly due to the complexity of the packets and to allow shorter feedbacks, even though it was initially implemented in _C_.
 
-Each process is dispatched as a thread, using ```threading``` library from _Python_ - i.e. a _listener_ and a _sender_ are two different threads, related to a same abstract process, bound to a certain port.
+Each process is dispatched as a thread, using the ```threading``` library from _Python_ - i.e. a _listener_ and a _sender_ are two different threads, related to a same abstract process, bound to a certain port.
 
-Also, note that some ```sleep()``` functions were applied in order to ensure priority to some processes that have not received any message yet.
+Also, note that some ```sleep()``` functions were applied in order to ensure priority to some processes that have not received any message yet. The _listener_ threads also had priority over the _sender_ threads.
 
 ### Results
 The results turned out to be highly experimental. For instance, in order to allow its execution on my OS (Ubuntu 16.04), some flags configuration were necessary, such as:
@@ -44,41 +44,31 @@ $ sysctl -n fs.nr_open
 
 These commands allowed to increase the limit of total of sockets supported by the OS and the stack size per application, which were necessary specially when N > 1000.
 
-When application took longer than one minute to execute, it was simply assumed that the simulation was finished - with some of the processors never receiving any message. For that matter, _time_ was not taken into account when comparing results, but rather how many messages received the rumor.
-
 #### How many times did each process tried to gossip?
-    ![Graph]()
+    ![Graph](results/avg.png)
 
-#### What was the parcel of successfull gossip attempts?
-
+#### What was the rate of successfull gossip attempts?
+     ![Graph](results/failure.png)
+     
 #### In the end of the dissemination, how many process have the rumor?
-
+     ![Graph](results/received.png)
+    
 #### How long did it take betwewen the start and the end of the dissemination?
 
-### Extra
-Through _Azure_ virtual machines, it was executed a test of the application between two hosts.
+When a process took longer than one minute to receive any message it was simply assumed that the simulation was finished and the process did not receive any rumor. For that matter, _time_ was not taken into account when comparing results, but rather how many messages received the rumor.
 
- | Total sent | Average gossips | Processes w/ a rumor | Failure rate |  Time  |
- | --- | --- | --- | --- | --- |
-|**A**| 1024 | 10.24 | 100% | 37% | 3.9s |
+In a more general matter, when ```N``` was bigger it did not imply in a quicker simulation, since the overhead for multiple processes was too much. It required a tradeoff between ```N``` and ```k``` - in general, when ```k=1``` it resulted in a faster simulation for high values of ```N```.
+
+### Extra
+By deploying two _Azure_ virtual machines, it was possible to execute a simulation between two hosts.
+
+| | Total sent | Average gossips | Processes w/ a rumor | Failure rate |  Time  |
+| --- | --- | --- | --- | --- | --- |
+|**A**| 1024 | 10.24 | 100% | 37% | 3.96s |
 |**B**| 727 | 7.27 | 100% | 53% | 2.47s |
 
-A
-min:            1
-max:            41
-total sent:     1024
-average:        10.24
-total failed:   482
-received:       100.0/100
-parcel f/s:     0.470703125
-time:           3963
+Since the application was already built to support multiple hosts, it was only necessary to start it the in both clients. Only one of the machines (**A** or **B**) will begin spreading the rumor until the simulation was finished.
 
-B
-min:            1
-max:            39
-total sent:     727
-average:        7.27
-total failed:   387
-received:       100.0/100
-parcel f/s:     0.532324621733
-time:           2472
+The results reflect the numbers for ```N=100``` for each machine (totalizing 200 processes) and ```K=2```. Each of the numbers presented refers to the machine, i.e. there were 1024 rumors sent from machine **A** and 727 from machine **B**.
+
+The performance improved in the sense that tbe simulation scaled much better, since there was the double number of cores that the processes could be parallelized.
