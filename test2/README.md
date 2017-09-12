@@ -47,11 +47,21 @@ These commands allowed to increase the limit of total of sockets supported by th
 #### How many times did each process tried to gossip?
 ![Graph](results/avg.png)
 
+The graph shows that the attempt to gossip scaled according with ```N``` and ```k```. With higher ```k```, it took longer to a _sender_ be killed and a process would try to gossip more. With a higher ```N```, there would be more possibilities to spread a rumor before betting itself killed, justifying a high gossip attempt number.
+
+The results may vary because most of the results relied on the priority system applied to _senders_ and _listeners_, which would vary according to the OS status and how well-spread the gossip was.
+
 #### What was the rate of successfull gossip attempts?
-![Graph](results/failure.png)
+
+![Graph](results/failure.png
+
+The failure rate was calculated with all the packets that *were received and validated as an already seem rumor*. The rate was lower in higher ```N``` and ```k``` because most of the packets were lost due to the memory stack for each TCP socket. Fewer packets were received and a chance of seeign an already seem rumor was lower.
      
 #### In the end of the dissemination, how many process have the rumor?
+
 ![Graph](results/received.png)
+
+The percentage of simpler simulations were much more successful. Although a higher ```k``` would, in theory, allow an increase of the spread, in practice there were so much processes running for ```N``` that many packets were lost, and some _sender_ threads completely dominate the execution process.
     
 #### How long did it take betwewen the start and the end of the dissemination?
 
