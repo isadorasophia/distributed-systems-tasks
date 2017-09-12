@@ -1,0 +1,159 @@
+N = 10
+K = 2
+min:            2
+max:            40
+total sent:     103
+average:        10.3
+total failed:   39
+parcel f/s:     0.378640776699
+time:           2141
+
+N = 10
+K = 4
+min:            3
+max:            38
+total sent:     176
+average:        17.6
+total failed:   75
+parcel f/s:     0.426136363636
+time:           2011
+
+N = 10
+K = 8
+min:            2
+max:            56
+total sent:     157
+average:        15.7
+total failed:   77
+parcel f/s:     0.490445859873
+time:           2971
+
+N = 100
+K = 2
+min:            1
+max:            57
+total sent:     1100
+average:        11.0
+total failed:   456
+parcel f/s:     0.414545454545
+time:           3673
+
+N = 100
+N = 4
+min:            1
+max:            86
+total sent:     1671
+average:        16.71
+total failed:   709
+parcel f/s:     0.424296828247
+time:           4502
+
+N = 100
+K = 8
+min:            1
+max:            287
+total sent:     4285
+average:        42.85
+total failed:   2062
+parcel f/s:     0.481213535589
+time:           14959
+
+N = 1000
+K = 2
+min:            1
+max:            46
+total sent:     9666
+average:        9.72434607646
+total failed:   4911
+received:       994.0/1000
+parcel f/s:     0.508069522036
+time:           61102
+
+N = 1000
+K = 4
+min:            1
+max:            115
+total sent:     19432
+average:        19.432
+total failed:   9679
+received:       1000.0/1000
+parcel f/s:     0.498095924249
+time:           58847
+
+N = 1000
+K = 8
+min:            1
+max:            172
+total sent:     36089
+average:        36.089
+total failed:   17060
+received:       1000.0/1000
+parcel f/s:     0.472720219457
+time:           88851
+
+N = 4000
+K = 2
+min:            1
+max:            248
+total sent:     53202
+average:        16.0488687783
+total failed:   14410
+received:       3315.0/4000
+parcel f/s:     0.270854479155
+time:           378528
+
+N = 4000
+K = 4
+min:            1
+max:            742
+total sent:     190882
+average:        53.7393018018
+total failed:   37605
+received:       3552.0/4000
+parcel f/s:     0.197006527593
+time:           939838
+	
+N = 4000
+K = 4
+min:            1
+max:            617
+total sent:     71391
+average:        85.0905840286
+total failed:   3695
+received:       839.0/4000
+parcel f/s:     0.0517572243
+time:           434411
+
+N = 8000
+K = 2
+min:            1
+max:            581
+total sent:     81714
+average:        15.793196753
+total failed:   15127
+received:       5174.0/8000
+parcel f/s:     0.185121276648
+time:           2321832
+
+two hosts:
+N=100
+K=2
+A
+min:            1
+max:            41
+total sent:     1024
+average:        10.24
+total failed:   482
+received:       100.0/100
+parcel f/s:     0.470703125
+time:           3963
+
+B
+min:            1
+max:            39
+total sent:     727
+average:        7.27
+total failed:   387
+received:       100.0/100
+parcel f/s:     0.532324621733
+time:           2472
