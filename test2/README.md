@@ -53,7 +53,7 @@ The results may vary because most of the results relied on the priority system a
 
 #### What was the rate of successfull gossip attempts?
 
-![Graph](results/failure.png
+![Graph](results/failure.png)
 
 The failure rate was calculated with all the packets that *were received and validated as an already seem rumor*. The rate was lower in higher ```N``` and ```k``` because most of the packets were lost due to the memory stack for each TCP socket. Fewer packets were received and a chance of seeign an already seem rumor was lower.
      
