@@ -47,7 +47,7 @@ These commands allowed to increase the limit of the total sockets supported by t
 #### How many times did each process tried to gossip?
 ![Graph](results/avg.png)
 
-The graph above shows that the attempt to gossip scaled according with ```N``` and ```k```. With higher ```k```, it took longer to a _sender_ be killed and, because of that, a process would try to gossip more. With a higher ```N```, there would be more possibilities to spread a rumor before betting itself killed, justifying a high gossip attempt number.
+The graph above shows that the attempt to gossip scaled according with ```N``` and ```k```. With a higher ```k```, it took longer to a _sender_ be killed and, because of that, a process would try to gossip more. With a higher ```N```, there would be more possibilities to spread a rumor before betting itself killed, justifying a high gossip attempt number.
 
 The results may vary because most of the simulations relied on the priority system applied to the threaads of _senders_ and _listeners_, which would vary according to the OS status and how well-spread the gossip was.
 
