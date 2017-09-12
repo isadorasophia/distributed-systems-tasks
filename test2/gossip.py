@@ -7,41 +7,8 @@ import argparse, random, time, sys
 import threading, Queue
 import zmq
 
-class Payload:
-    """
-        Skeleton of a payload responsible for exchange of 
-        messages in gossip protocol
-          host&port:    origin address 
-          req:          if current message is a REQ with a message
-          stop:         should we tell a process to be stopped?
-    """
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
-
-        self.req = False 
-        self.stop = False
-
-    def set_msg(self, msg):
-        self.content = msg
-        self.req = True
-
-    def set_stop(self):
-        self.stop = True
-
-class Process:
-    """
-        Basic info. regarding a process 
-          context:      ZMQ context
-          ip&port:      communication info
-          host_list:    all hosts available and its respective ports
-    """
-    def __init__(self, context, host, port, host_list):
-        self.context = context
-        self.host_list = host_list
-
-        self.host = host 
-        self.port = port
+from structures import *
+from helpers import *
 
 class SenderProcess(threading.Thread):
     """
@@ -92,8 +59,6 @@ class SenderProcess(threading.Thread):
                 break
 
             self.total_sent += 1
-            # if __debug__:
-            #     print '[/] MSG TO: ' + str(random_port) + ', FROM: ' + str(self.p.port)
 
         # apply result        
         self.q.put(self.total_sent)
@@ -138,7 +103,7 @@ class ListenerProcess(threading.Thread):
         try:
             recv_socket = self.context.socket(zmq.PULL)     # PULL SOCKET
             recv_socket.setsockopt(zmq.LINGER, 0)           # just in case: do not linger
-            recv_socket.setsockopt(zmq.RCVTIMEO, 90000)
+            recv_socket.setsockopt(zmq.RCVTIMEO, 90000)     # apply a timeout of 1m30s
             recv_socket.set_hwm(100000)                     # buffer for stack size
             recv_socket.bind(self.endpoint)                 # CONNECT
 
@@ -180,8 +145,7 @@ class ListenerProcess(threading.Thread):
             if msg.req:
                 # have we already received it?
                 if msg.content in self.all_msg:
-
-                    # create a reply telling this sender to stop
+                    # create a reply telling the source to stop
                     rep = Payload(self.p.host, self.p.port)
                     rep.set_stop()
 
@@ -237,62 +201,12 @@ class ListenerProcess(threading.Thread):
         """
         return self.random.uniform(0, 1) < 1/self.k
 
-################### Helper functions! ###################
-
-def cook_parser():
-    """
-        Returns a parser dedicated to our Gossip simulation.
-    """
-    parser = argparse.ArgumentParser(description='Gossip protocol simulation.')
-
-    parser.add_argument('n', metavar='N', type=int, help='total of processes')
-    parser.add_argument('k', metavar='K', type=int, help='probability to stop (i.e.: p < 1/K)')
-
-    return parser
-
-def tcp_endpoint(ip, port):
-    """
-        Create a TCP endpoint string
-    """
-    return "tcp://" + ip + ":" + str(port)
-
-def send(socket, ip, port, payload):
-    """
-        Send a payload to an ip and port through TCP, using ZMQ sockets
-    """
-    endpoint = tcp_endpoint(ip, port)
-
-    try:
-        socket.connect(endpoint)
-        socket.send_pyobj(payload, flags=zmq.NOBLOCK)
-
-        socket.disconnect(endpoint)
-        time.sleep(.5)
-
-        return 1
-
-    except:
-        print '# Send process was interrupted!'
-        return -1
-
-def range_n(n, start, end, exclude=False):
-    """
-        Produces a range from start to end, without n
-    """
-    if exclude:
-        return range(start, n) + range(n+1, end)
-    else:
-        return range(start, end)
-
-def miliseconds():
-    return int(round(time.time() * 1000))
-
 def main(N, K):
     """
         Main function!
     """
 
-    # DEFINITIONS
+    #### definitions
     min_port = 15000
     max_port = 50000
 
@@ -304,18 +218,19 @@ def main(N, K):
     # we can't surpass our limit
     assert(min_port + N < max_port)
 
-    # context variables
+    #### context variables
     context = zmq.Context()
     context.set(zmq.MAX_SOCKETS, N*3+1)
-    context.setsockopt(zmq.LINGER, 1)
+    context.setsockopt(zmq.LINGER, 1)    # OBS: linger does not work for multiple hosts!
 
     q = Queue.Queue()
-
     listeners = []
     res = []
 
+    #### start time!
     start = miliseconds()
 
+    ## start our listeners!
     for i in xrange(N):
         # create a new process as a LISTENER
         q.put(Process(context, current_ip, min_port+i, host_list))
@@ -339,24 +254,23 @@ def main(N, K):
     # wait for all process to be done
     q.join()
 
+    #### time is over!
     end = miliseconds()
 
-    # end all processes
+    ### end all processes
     for i in xrange(N):
         listeners[i].terminate = True
 
     context.term()
 
-    min_sent = sys.maxint
-    max_sent = 0
-    total_sent = 0
-    total_failed = 0
+    ### gather data
+    min_sent        = sys.maxint
+    max_sent        = 0
+    total_sent      = 0
+    total_failed    = 0
+    received        = 0.
+    total_sent_i    = [0] * N
 
-    received = 0.
-
-    total_sent_i = [0] * N
-
-    # gather data
     for i in xrange(N):
         total_sent_i[i], failed = res[i].get()
 
@@ -375,24 +289,33 @@ def main(N, K):
         if total_sent_i[i] > max_sent:
             max_sent = total_sent_i[i]
 
-    print total_sent_i
+    print '\n############# Results report:'
+    print 'Min. sent from p.: \t'   + str(min_sent)
+    print 'Max. sent from p.: \t'   + str(max_sent)
+    print 'Total sent: \t\t'        + str(total_sent)
+    print 'Average per p.: \t'      + str(total_sent/received)
+    print 'Total failed rumors: \t' + str(total_failed)
+    print 'P. with rumor: \t\t'     + str(int(received)) + '/' + str(N)
 
-    print '############# Results report:'
-    print 'min: \t\t' + str(min_sent)
-    print 'max: \t\t' + str(max_sent)
-    print 'total sent: \t' + str(total_sent)
-    print 'average: \t' + str(total_sent/received)
-    print 'total failed: \t' + str(total_failed)
-    print 'received: \t' + str(received) + '/' + str(N)
+    if total_sent != 0:
+        print 'Rate Failed/Success: \t' + str(total_failed/(total_sent*1.))
+    else:
+        print 'Rate Failed/Success: \t#'
 
-    try:
-        print 'parcel f/s: \t' + str(total_failed/(total_sent*1.))
-    except ZeroDivisionError:
-        print 'parcel f/s: #'
-
-    print 'time: \t\t' + str(end-start)
+    print 'Time: \t\t\t' + str(end-start) + 'ms'
 
     return
+
+def cook_parser():
+    """
+        Returns a parser dedicated to our Gossip simulation.
+    """
+    parser = argparse.ArgumentParser(description='Gossip protocol simulation.')
+
+    parser.add_argument('n', metavar='N', type=int, help='total of processes')
+    parser.add_argument('k', metavar='K', type=int, help='probability to stop (i.e.: p < 1/K)')
+
+    return parser
 
 if __name__ == "__main__":
     parser = cook_parser()
