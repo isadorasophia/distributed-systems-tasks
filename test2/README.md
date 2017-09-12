@@ -51,13 +51,13 @@ The graph above shows that the attempt to gossip scaled according with ```N``` a
 
 The results may vary because most of the simulations relied on the priority system applied to the threaads of _senders_ and _listeners_, which would vary according to the OS status and how well-spread the gossip was.
 
-#### What was the rate of successfull gossip attempts?
+#### What was the rate of successful gossip attempts?
 
 ![Graph](results/failure.png)
 
 The failure rate was calculated by the total of packets that *were received and validated as an already seem rumor*. The rate was lower with higher a ```N``` and ```k``` because most of the packets were lost (and never received by any _listener_) due to the memory stack for each TCP socket: fewer packets were received and a chance of identifying an already seem rumor was lower.
      
-#### In the end of the dissemination, how many process have the rumor?
+#### In the end of the dissemination, how many processes have the rumor?
 
 ![Graph](results/received.png)
 
@@ -81,4 +81,4 @@ Since the application was already built to support multiple hosts, it was only n
 
 The results reflect the numbers for ```N=100``` for each machine (totalizing 200 processes) and ```K=2```. Each of the numbers presented refers to the machine, i.e. there were 1024 rumors sent from machine **A** and 727 from machine **B**.
 
-The performance improved in the sense that tbe simulation scaled much better, since there was the double number of cores that the processes could be parallelized.
+The performance improved in the sense that the simulation scaled much better, since there was the double number of cores that the processes could be parallelized.

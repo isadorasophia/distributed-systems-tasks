@@ -43,7 +43,7 @@ avg_plot8,  = plt.plot(x, k8_info, 'r-', label='k=8', color='orange')
 plt.legend(handles=[avg_plot8, avg_plot4, avg_plot2])
 
 ## pretty~
-plt.title('Percentage of processes that received rumour')
+plt.title('Percentage of processes that received the rumor')
 plt.xlabel('N')
 plt.xlim([10, 8000])
 plt.xticks(x)
